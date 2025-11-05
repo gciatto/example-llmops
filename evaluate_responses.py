@@ -1,137 +1,68 @@
-"""
-Evaluate generated answers using various metrics.
-
-This script loads generated answers and evaluates them using simple metrics
-like length, keyword presence, and structure.
-"""
-import argparse
-import pandas as pd
 import mlflow
-import re
-from typing import Dict
+from mlflow.entities import Feedback
+from mlflow.genai.scorers import Guidelines, scorer, RelevanceToQuery
+import sys
 
 
-def evaluate_answer(answer: str, question: str, category: str, weight: int) -> Dict[str, float]:
-    """
-    Evaluate a single answer using various metrics.
-    
-    Args:
-        answer: Generated answer text
-        question: Original question
-        category: Question category
-        weight: Question weight/difficulty
-        
-    Returns:
-        Dictionary of metric names to scores
-    """
-    metrics = {}
-    
-    # Length metrics
-    metrics['answer_length'] = len(answer)
-    metrics['word_count'] = len(answer.split())
-    metrics['sentence_count'] = len(re.split(r'[.!?]+', answer))
-    
-    # Check for error
-    metrics['is_error'] = 1.0 if answer.startswith('Error:') else 0.0
-    
-    # Check if answer contains question keywords (simple relevance check)
-    question_keywords = set(re.findall(r'\b\w{4,}\b', question.lower()))
-    answer_keywords = set(re.findall(r'\b\w{4,}\b', answer.lower()))
-    common_keywords = question_keywords.intersection(answer_keywords)
-    metrics['keyword_overlap'] = len(common_keywords) / max(len(question_keywords), 1)
-    
-    # Structure checks
-    metrics['has_multiple_sentences'] = 1.0 if metrics['sentence_count'] > 1 else 0.0
-    metrics['is_detailed'] = 1.0 if metrics['word_count'] >= 50 else 0.0
-    metrics['is_very_detailed'] = 1.0 if metrics['word_count'] >= 100 else 0.0
-    
-    # Category-specific expectations (simple heuristics)
-    if category == "Definition":
-        # Definitions should be clear and concise
-        metrics['meets_category_expectation'] = 1.0 if 20 <= metrics['word_count'] <= 150 else 0.5
-    elif category == "Commonsense":
-        # Commonsense should be explanatory
-        metrics['meets_category_expectation'] = 1.0 if metrics['word_count'] >= 30 else 0.5
-    else:
-        metrics['meets_category_expectation'] = 1.0
-    
-    return metrics
-
-
-def main():
-    parser = argparse.ArgumentParser(
-        description="Evaluate generated answers"
+@scorer
+def enough_words(outputs: dict) -> Feedback:
+    text = outputs['choices'][-1]['message']['content']
+    word_count = len(text.split())
+    score = word_count >= 10
+    rationale = (
+        f"The response has more than 10 words: {word_count}"
+        if score
+        else f"The response does not have enough words because it has less than 10 words: {word_count}."
     )
-    parser.add_argument(
-        "--answers-file",
-        type=str,
-        default="answers.csv",
-        help="CSV file with generated answers"
+    return Feedback(value=score, rationale=rationale)
+
+@scorer
+def not_too_many_words(outputs: dict) -> Feedback:
+    text = outputs['choices'][-1]['message']['content']
+    word_count = len(text.split())
+    score = word_count <= 1000
+    rationale = (
+        f"The response has less than 1000 words: {word_count}"
+        if score
+        else f"The response has too many words: {word_count}."
     )
-    parser.add_argument(
-        "--output-file",
-        type=str,
-        default="evaluation.csv",
-        help="Output CSV file for evaluation results"
+    return Feedback(value=score, rationale=rationale)
+
+
+def guidelines_model(model: str = None):
+    yield Guidelines(
+        name="english",
+        guidelines="The answer should be in English.",
+        model=model
     )
-    
-    args = parser.parse_args()
-    
-    # Start MLflow run
-    with mlflow.start_run():
-        # Log parameters
-        mlflow.log_param("answers_file", args.answers_file)
-        
-        # Load answers
-        answers_df = pd.read_csv(args.answers_file)
-        print(f"Loaded {len(answers_df)} answers from {args.answers_file}")
-        
-        # Evaluate each answer
-        evaluations = []
-        
-        for idx, row in answers_df.iterrows():
-            metrics = evaluate_answer(
-                answer=row['Answer'],
-                question=row['Question'],
-                category=row['Category'],
-                weight=row['Weight']
-            )
-            
-            evaluation = {
-                'Category': row['Category'],
-                'Question': row['Question'],
-                'Weight': row['Weight'],
-                **metrics
-            }
-            evaluations.append(evaluation)
-        
-        # Create evaluation DataFrame
-        eval_df = pd.DataFrame(evaluations)
-        eval_df.to_csv(args.output_file, index=False)
-        print(f"\nEvaluation results saved to {args.output_file}")
-        
-        # Log aggregate metrics
-        mlflow.log_metric("avg_answer_length", eval_df['answer_length'].mean())
-        mlflow.log_metric("avg_word_count", eval_df['word_count'].mean())
-        mlflow.log_metric("avg_sentence_count", eval_df['sentence_count'].mean())
-        mlflow.log_metric("error_rate", eval_df['is_error'].mean())
-        mlflow.log_metric("avg_keyword_overlap", eval_df['keyword_overlap'].mean())
-        mlflow.log_metric("detailed_answer_rate", eval_df['is_detailed'].mean())
-        mlflow.log_metric("category_expectation_score", eval_df['meets_category_expectation'].mean())
-        
-        # Log artifact
-        mlflow.log_artifact(args.output_file)
-        
-        # Print summary
-        print("\n=== Evaluation Summary ===")
-        print(f"Average word count: {eval_df['word_count'].mean():.1f}")
-        print(f"Average keyword overlap: {eval_df['keyword_overlap'].mean():.2%}")
-        print(f"Detailed answers: {eval_df['is_detailed'].mean():.2%}")
-        print(f"Error rate: {eval_df['is_error'].mean():.2%}")
-        print(f"Category expectation score: {eval_df['meets_category_expectation'].mean():.2%}")
-        
-        print("\nMLflow run completed!")
+    yield Guidelines(
+        name="software_engineering_related",
+        guidelines="The answer is correctly contextualizing the question within the domain of software engineering.",
+        model=model
+    )
+    yield Guidelines(
+        name="reference_to_definition",
+        guidelines="The answer should reference and/or quote relevant definitions for the concepts mentioned in the question.",
+        model=model
+    )
+    yield RelevanceToQuery(
+        model=model
+    )
+    yield enough_words
+    yield not_too_many_words
 
 
 if __name__ == "__main__":
-    main()
+
+    generation_run_id = sys.argv[1] if len(sys.argv) > 1 else None
+    if generation_run_id:
+        traces = mlflow.search_traces(run_id=generation_run_id)
+    else:
+        traces = mlflow.search_traces() # all traces in the experiment
+
+    judge_model = sys.argv[2] if len(sys.argv) > 2 else None
+    
+    mlflow.genai.evaluate(
+        data=traces,
+        scorers=list(guidelines_model(model=judge_model)),
+    )

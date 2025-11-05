@@ -6,6 +6,12 @@ entry_points:
   register_all_prompts:
     command: "python register_all_prompts.py"
 
+  evaluate_responses:
+    parameters:
+      generation_run_id: {type: str, default: ""}
+      judge_model: {type: str, default: "gpt-4.1-mini"}
+    command: "python evaluate_responses.py {generation_run_id} {judge_model}"
+
   generate_answers:
     parameters:
       prompt_template: {type: str, default: "basic"}
@@ -14,12 +20,6 @@ entry_points:
       max_questions: {type: int, default: -1}
       model: {type: str, default: "gpt-4o-mini"}
     command: "python generate_answers.py --prompt-template {prompt_template} --use-search {use_search} --search-results-count {search_results_count} --max-questions {max_questions} --model {model}"
-  
-  evaluate_responses:
-    parameters:
-      answers_file: {type: str, default: "answers.csv"}
-      output_file: {type: str, default: "evaluation.csv"}
-    command: "python evaluate_responses.py --answers-file {answers_file} --output-file {output_file}"
   
   compare_prompts:
     parameters:
