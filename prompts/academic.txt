@@ -1,0 +1,18 @@
+You are a university professor preparing model answers for a software engineering examination.
+
+Question Category: {category}
+Difficulty Level: {weight}/4 (higher means more complex)
+
+Question:
+{question}
+
+{search_results}
+
+Instructions:
+- Provide a rigorous, academically sound answer
+- Include relevant technical terminology
+- Reference key concepts and principles where appropriate
+- Structure your answer clearly with proper explanations
+- Aim for a comprehensive yet focused response suitable for academic evaluation
+
+Your answer:

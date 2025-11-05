@@ -1,0 +1,9 @@
+Answer this software engineering question briefly and directly.
+
+Category: {category}
+Question: {question}
+Weight: {weight}
+
+{search_results}
+
+Keep your answer concise - focus only on the most essential information. Use bullet points if helpful.

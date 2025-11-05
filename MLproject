@@ -1,0 +1,28 @@
+name: quiz-answer-generator
+
+python_env: python_env.yaml
+
+entry_points:
+  generate_answers:
+    parameters:
+      prompt_template: {type: str, default: "prompts/basic.txt"}
+      output_file: {type: str, default: "answers.csv"}
+      use_search: {type: str, default: "false"}
+      search_results_count: {type: int, default: 3}
+      max_questions: {type: int, default: -1}
+      model: {type: str, default: "gpt-4o-mini"}
+    command: "python generate_answers.py --prompt-template {prompt_template} --output-file {output_file} --use-search {use_search} --search-results-count {search_results_count} --max-questions {max_questions} --model {model}"
+  
+  evaluate_responses:
+    parameters:
+      answers_file: {type: str, default: "answers.csv"}
+      output_file: {type: str, default: "evaluation.csv"}
+    command: "python evaluate_responses.py --answers-file {answers_file} --output-file {output_file}"
+  
+  compare_prompts:
+    parameters:
+      prompt_templates: {type: str, default: "prompts/basic.txt,prompts/academic.txt,prompts/concise.txt"}
+      max_questions: {type: int, default: 10}
+      use_search: {type: str, default: "false"}
+      model: {type: str, default: "gpt-4o-mini"}
+    command: "python compare_prompts.py --prompt-templates {prompt_templates} --max-questions {max_questions} --use-search {use_search} --model {model}"
