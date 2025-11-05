@@ -6,18 +6,11 @@ web search results, and generates answers using OpenAI's API with a
 configurable prompt template.
 """
 import argparse
-import os
 import pandas as pd
 from openai import OpenAI
 import mlflow
-from typing import Optional
-from utils import (
-    load_questions,
-    search_web,
-    format_search_results,
-    load_prompt_template,
-    get_openai_api_key
-)
+from utils import *
+import tempfile
 
 
 def generate_answer(
@@ -81,14 +74,8 @@ def main():
     parser.add_argument(
         "--prompt-template",
         type=str,
-        default="prompts/basic.txt",
-        help="Path to prompt template file"
-    )
-    parser.add_argument(
-        "--output-file",
-        type=str,
-        default="answers.csv",
-        help="Output CSV file for answers"
+        default="basic",
+        help="Name of the prompt template file inside `prompts/`, without extension (e.g., 'basic' for `basic.txt`)"
     )
     parser.add_argument(
         "--use-search",
@@ -120,17 +107,14 @@ def main():
     use_search = args.use_search.lower() == "true"
     
     # Start MLflow run
-    with mlflow.start_run():
-        # Log parameters
-        mlflow.log_param("prompt_template", args.prompt_template)
-        mlflow.log_param("use_search", use_search)
-        mlflow.log_param("search_results_count", args.search_results_count)
-        mlflow.log_param("model", args.model)
-        mlflow.log_param("max_questions", args.max_questions)
-        
+    with mlflow.start_run(run_name="generate_answers"):
+        mlflow.set_tag("mlflow.runName", "generate_answers")
+
+        mlflow.autolog()
+
         # Load prompt template
         prompt_template = load_prompt_template(args.prompt_template)
-        mlflow.log_text(prompt_template, "prompt_template.txt")
+        mlflow.genai.register_prompt(args.prompt_template, prompt_template)
         
         # Initialize OpenAI client
         api_key = get_openai_api_key()
@@ -182,12 +166,21 @@ def main():
         
         # Save results
         results_df = pd.DataFrame(answers)
-        results_df.to_csv(args.output_file, index=False)
-        print(f"\nAnswers saved to {args.output_file}")
-        
-        # Log artifact
-        mlflow.log_artifact(args.output_file)
-        mlflow.log_metric("successful_generations", len([a for a in answers if not a['Answer'].startswith('Error:')]))
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_dir = Path(tmp_dir)
+            temp_output_path = tmp_dir / "answers.csv"
+            results_df.to_csv(temp_output_path, index=False)
+            print(f"\nAnswers saved to {temp_output_path}")
+
+            # Log artifact
+            mlflow.log_artifact(temp_output_path)
+            # Print artifact URI on MLflow server
+            print(f"Answers artifact logged at: {mlflow.get_artifact_uri('answers.csv')}")
+            mlflow.log_metric("successful_generations", len([a for a in answers if not a['Answer'].startswith('Error:')]))
+            mlflow.log_metric("total_generations", len(answers))
+            mlflow.log_metric("failed_generations", len([a for a in answers if a['Answer'].startswith('Error:')]))
+            mlflow.log_metric("success_rate", len([a for a in answers if not a['Answer'].startswith('Error:')]) / len(answers) if len(answers) > 0 else 0)
         
         print("MLflow run completed!")
 

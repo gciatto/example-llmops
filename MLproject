@@ -5,13 +5,12 @@ python_env: python_env.yaml
 entry_points:
   generate_answers:
     parameters:
-      prompt_template: {type: str, default: "prompts/basic.txt"}
-      output_file: {type: str, default: "answers.csv"}
+      prompt_template: {type: str, default: "basic"}
       use_search: {type: str, default: "false"}
       search_results_count: {type: int, default: 3}
       max_questions: {type: int, default: -1}
       model: {type: str, default: "gpt-4o-mini"}
-    command: "python generate_answers.py --prompt-template {prompt_template} --output-file {output_file} --use-search {use_search} --search-results-count {search_results_count} --max-questions {max_questions} --model {model}"
+    command: "python generate_answers.py --prompt-template {prompt_template} --use-search {use_search} --search-results-count {search_results_count} --max-questions {max_questions} --model {model}"
   
   evaluate_responses:
     parameters:

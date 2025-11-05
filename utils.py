@@ -3,11 +3,17 @@ Utility functions for the quiz answer generator project.
 """
 import os
 import pandas as pd
+from pathlib import Path
 from typing import List, Dict
 from duckduckgo_search import DDGS
 
 
-def load_questions(csv_path: str = "questions.csv") -> pd.DataFrame:
+DIR_ROOT = Path(__file__).parent
+FILE_QUESTIONS_CSV = DIR_ROOT / "questions.csv"
+DIR_PROMPTS = DIR_ROOT / "prompts"
+
+
+def load_questions(csv_path: str = FILE_QUESTIONS_CSV) -> pd.DataFrame:
     """
     Load questions from CSV file.
     
@@ -69,18 +75,18 @@ def format_search_results(results: List[Dict[str, str]]) -> str:
     return formatted
 
 
-def load_prompt_template(template_path: str) -> str:
+def load_prompt_template(name: str) -> str:
     """
-    Load a prompt template from a file.
+    Load a prompt template from the prompts directory.
     
     Args:
-        template_path: Path to the template file
-        
+        name: Name of the prompt template file inside `prompts/`, without extension (e.g., "basic" for `basic.txt`)
+
     Returns:
         Template string
     """
-    with open(template_path, 'r', encoding='utf-8') as f:
-        return f.read()
+    template_path = DIR_PROMPTS / f"{name}.txt"
+    return template_path.read_text(encoding='utf-8')
 
 
 def get_openai_api_key() -> str:

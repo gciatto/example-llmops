@@ -5,11 +5,11 @@ This script runs answer generation with multiple prompt templates,
 evaluates the results, and logs everything to MLflow for comparison.
 """
 import argparse
-import os
 import pandas as pd
 import mlflow
 from openai import OpenAI
 import tempfile
+from pathlib import Path
 from evaluate_responses import evaluate_answer
 from utils import (
     load_questions,
@@ -114,7 +114,7 @@ def main():
         
         # Test each prompt template
         for template_path in template_paths:
-            template_name = os.path.basename(template_path).replace('.txt', '')
+            template_name = Path(template_path).stem
             print(f"\n{'='*60}")
             print(f"Testing prompt: {template_name}")
             print(f"{'='*60}")
@@ -190,7 +190,7 @@ def main():
                     answers_df = pd.DataFrame(answers)
                     answers_df.to_csv(f.name, index=False)
                     mlflow.log_artifact(f.name, f"answers_{template_name}.csv")
-                    os.unlink(f.name)
+                    Path(f.name).unlink()
                 
                 # Print summary
                 print(f"\nResults for {template_name}:")
@@ -215,7 +215,7 @@ def main():
         with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
             summary_df.to_csv(f.name, index=False)
             mlflow.log_artifact(f.name, "comparison_summary.csv")
-            os.unlink(f.name)
+            Path(f.name).unlink()
         
         print(f"\n{'='*60}")
         print("COMPARISON SUMMARY")
