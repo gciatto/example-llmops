@@ -3,6 +3,9 @@ name: quiz-answer-generator
 python_env: python_env.yaml
 
 entry_points:
+  register_all_prompts:
+    command: "python register_all_prompts.py"
+
   generate_answers:
     parameters:
       prompt_template: {type: str, default: "basic"}

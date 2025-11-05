@@ -18,7 +18,7 @@ def generate_answer(
     question: str,
     category: str,
     weight: int,
-    prompt_template: str,
+    prompt_template_name: str,
     model: str = "gpt-4o-mini",
     use_search: bool = False,
     search_results_count: int = 3
@@ -31,7 +31,7 @@ def generate_answer(
         question: Question text
         category: Question category
         weight: Question weight/difficulty
-        prompt_template: Template string for the prompt
+        prompt_template_name: Name of the prompt template file (without extension)
         model: OpenAI model to use
         use_search: Whether to enrich with web search
         search_results_count: Number of search results to include
@@ -44,9 +44,11 @@ def generate_answer(
     if use_search:
         results = search_web(question, max_results=search_results_count)
         search_context = format_search_results(results)
+
+    prompt = mlflow.genai.load_prompt(f"prompts:/{prompt_template_name}@latest")
     
     # Format the prompt
-    prompt = prompt_template.format(
+    prompt = prompt.template.format(
         category=category,
         question=question,
         weight=weight,
@@ -111,10 +113,6 @@ def main():
         mlflow.set_tag("mlflow.runName", "generate_answers")
 
         mlflow.autolog()
-
-        # Load prompt template
-        prompt_template = load_prompt_template(args.prompt_template)
-        mlflow.genai.register_prompt(args.prompt_template, prompt_template)
         
         # Initialize OpenAI client
         api_key = get_openai_api_key()
@@ -142,7 +140,7 @@ def main():
                     question=row['Question'],
                     category=row['Category'],
                     weight=row['Weight'],
-                    prompt_template=prompt_template,
+                    prompt_template_name=args.prompt_template,
                     model=args.model,
                     use_search=use_search,
                     search_results_count=args.search_results_count
