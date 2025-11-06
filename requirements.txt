@@ -1,5 +1,5 @@
 openai
 mlflow
-duckduckgo-search
+ddgs
 pandas
 python-dotenv

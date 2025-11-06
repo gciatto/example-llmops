@@ -5,7 +5,7 @@ import os
 import pandas as pd
 from pathlib import Path
 from typing import List, Dict
-from duckduckgo_search import DDGS
+from ddgs import DDGS
 
 
 DIR_ROOT = Path(__file__).parent
@@ -38,21 +38,16 @@ def search_web(query: str, max_results: int = 3) -> List[Dict[str, str]]:
     Returns:
         List of dictionaries with 'title', 'url', and 'snippet' keys
     """
-    try:
-        with DDGS() as ddgs:
-            results = list(ddgs.text(query, max_results=max_results))
-            return [
-                {
-                    'title': r.get('title', ''),
-                    'url': r.get('href', ''),
-                    'snippet': r.get('body', '')
-                }
-                for r in results
-            ]
-    except Exception as e:
-        print(f"Error searching web: {e}")
-        return []
-
+    with DDGS() as ddgs:
+        results = list(ddgs.text(query, max_results=max_results))
+        return [
+            {
+                'title': r.get('title', ''),
+                'url': r.get('href', ''),
+                'snippet': r.get('body', '')
+            }
+            for r in results
+        ]
 
 def format_search_results(results: List[Dict[str, str]]) -> str:
     """
@@ -67,12 +62,27 @@ def format_search_results(results: List[Dict[str, str]]) -> str:
     if not results:
         return "No search results available."
     
-    formatted = "Relevant web search results:\n\n"
+    formatted = "Relevant Web search results:\n\n"
     for i, result in enumerate(results, 1):
-        formatted += f"{i}. {result['title']}\n"
+        formatted += f"{i}. [{result['title']}]({result['url']})\n"
         formatted += f"   {result['snippet']}\n"
-        formatted += f"   Source: {result['url']}\n\n"
     return formatted
+
+
+def web_search_tool(query: str, max_results: int = 3) -> str:
+    """
+    Tool function for LLM to search the web and get formatted results.
+    This combines search_web and format_search_results into a single tool.
+    
+    Args:
+        query: Search query string
+        max_results: Maximum number of results to return (default: 3)
+        
+    Returns:
+        Formatted string with search results
+    """
+    results = search_web(query, max_results=max_results)
+    return format_search_results(results)
 
 
 def load_prompt_template(name: str) -> str:
