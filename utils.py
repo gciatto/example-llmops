@@ -6,6 +6,7 @@ import pandas as pd
 from pathlib import Path
 from typing import List, Dict
 from ddgs import DDGS
+from langchain.tools import tool
 
 
 DIR_ROOT = Path(__file__).parent
@@ -69,6 +70,7 @@ def format_search_results(results: List[Dict[str, str]]) -> str:
     return formatted
 
 
+@tool
 def web_search_tool(query: str, max_results: int = 3) -> str:
     """
     Tool function for LLM to search the web and get formatted results.

@@ -15,10 +15,18 @@ entry_points:
   generate_answers:
     parameters:
       prompt_template: {type: str, default: "basic"}
-      use_search: {type: str, default: "false"}
-      search_results_count: {type: int, default: 3}
       max_questions: {type: int, default: -1}
-      model: {type: str, default: "gpt-4o-mini"}
+      model: {type: str, default: "gpt-4.1-mini"}
       temperature: {type: float, default: 0.7}
       max_tokens: {type: int, default: 500}
-    command: "python generate_answers.py --prompt-template {prompt_template} --use-search {use_search} --search-results-count {search_results_count} --max-questions {max_questions} --model {model} --temperature {temperature} --max-tokens {max_tokens}"
+    command: "python generate_answers.py --prompt-template {prompt_template} --max-questions {max_questions} --model {model} --temperature {temperature} --max-tokens {max_tokens}"
+  
+  generate_answers_with_agent:
+    parameters:
+      prompt_template: {type: str, default: "basic"}
+      search_results_count: {type: int, default: 3}
+      max_questions: {type: int, default: -1}
+      model: {type: str, default: "gpt-4.1-mini"}
+      temperature: {type: float, default: 0.7}
+      max_tokens: {type: int, default: 500}
+    command: "python generate_answers_with_agent.py --prompt-template {prompt_template} --search-results-count {search_results_count} --max-questions {max_questions} --model {model} --temperature {temperature} --max-tokens {max_tokens}"

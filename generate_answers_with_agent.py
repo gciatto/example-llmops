@@ -1,38 +1,53 @@
 """
-Generate answers for quiz questions using OpenAI API.
+Generate answers for quiz questions using LangChain and OpenAI API.
 
-This script loads questions from a CSV file, optionally enriches them with
-web search results, and generates answers using OpenAI's API with a 
-configurable prompt template.
+This script loads questions from a CSV file and generates answers using 
+LangChain's API with configurable prompt templates and optional tool usage.
 """
 import argparse
 import pandas as pd
-from openai import OpenAI
 import mlflow
 from utils import *
 import tempfile
+from langchain_openai import ChatOpenAI
+from langchain.agents import AgentExecutor, create_tool_calling_agent
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+
+
+@tool
+def web_search(query: str, max_results: int = 3) -> str:
+    """Search the web for information related to a query. Use this when you need additional context or references to answer the question accurately.
+    
+    Args:
+        query: The search query to look up on the web
+        max_results: Maximum number of search results to return (default: 3)
+    
+    Returns:
+        Formatted string with search results including titles, snippets, and URLs
+    """
+    return web_search_tool(query, max_results)
 
 
 def generate_answer(
-    client: OpenAI,
     question: str,
     category: str,
     weight: int,
     prompt_template_name: str,
     model: str = "gpt-4o-mini",
+    search_results_count: int = 3,
     temperature: float = 0.7,
     max_tokens: int = 500
 ) -> str:
     """
-    Generate an answer for a single question.
+    Generate an answer for a single question using LangChain.
     
     Args:
-        client: OpenAI client instance
         question: Question text
         category: Question category
         weight: Question weight/difficulty
         prompt_template_name: Name of the prompt template file (without extension)
         model: OpenAI model to use
+        search_results_count: Number of search results to include when tool is called
         temperature: Sampling temperature for generation
         max_tokens: Maximum tokens in generated response
         
@@ -40,38 +55,81 @@ def generate_answer(
         Generated answer text
     """
 
-    prompt = mlflow.genai.load_prompt(f"prompts:/{prompt_template_name}@latest")
+    # Load prompt template
+    prompt_text = mlflow.genai.load_prompt(f"prompts:/{prompt_template_name}@latest")
     
-    # Format the prompt
-    prompt = prompt.template.format(
+    # Format the base prompt
+    formatted_prompt = prompt_text.format(
         category=category,
         question=question,
         weight=weight,
     )
     
-    # Call OpenAI API
-    response = client.chat.completions.create(
+    # Initialize LLM
+    llm = ChatOpenAI(
         model=model,
-        messages=[
-            {"role": "system", "content": "You are an expert in software engineering education."},
-            {"role": "user", "content": prompt}
-        ],
         temperature=temperature,
-        max_tokens=max_tokens
+        max_tokens=max_tokens,
+        api_key=get_openai_api_key()
     )
     
-    return response.choices[0].message.content
+    if search_results_count > 0:
+        # Create agent with tools
+        tools = [web_search]
+        
+        # Create prompt template for agent
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", 
+                "You are an expert in software engineering education.\n"
+                "Use the provided web search tool to find relevant information when needed."
+            ),
+            ("user", "{input}"),
+            MessagesPlaceholder("agent_scratchpad"),
+        ])
+        
+        # Create agent
+        agent = create_tool_calling_agent(llm, tools, prompt)
+        agent_executor = AgentExecutor(
+            agent=agent,
+            tools=tools,
+            verbose=False,
+            max_iterations=3,
+            handle_parsing_errors=True
+        )
+        
+        # Invoke agent
+        result = agent_executor.invoke({
+            "input": formatted_prompt,
+            "max_results": search_results_count
+        })
+        
+        return result["output"]
+    else:
+        # Direct LLM call without tools
+        messages = [
+            ("system", "You are an expert in software engineering education."),
+            ("human", formatted_prompt)
+        ]
+        
+        response = llm.invoke(messages)
+        return response.content
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate answers for quiz questions using OpenAI"
+        description="Generate answers for quiz questions using LangChain and OpenAI"
     )
     parser.add_argument(
         "--prompt-template",
         type=str,
         default="basic",
         help="Name of the prompt template file inside `prompts/`, without extension (e.g., 'basic' for `basic.txt`)"
+    )
+    parser.add_argument(
+        "--search-results-count",
+        type=int,
+        default=3,
+        help="Number of search results to include"
     )
     parser.add_argument(
         "--max-questions",
@@ -101,14 +159,10 @@ def main():
     args = parser.parse_args()
     
     # Start MLflow run
-    with mlflow.start_run(run_name="generate_answers") as run:
-        mlflow.set_tag("mlflow.runName", "generate_answers")
+    with mlflow.start_run(run_name="generate_answers_with_agent") as run:
+        mlflow.set_tag("mlflow.runName", "generate_answers_with_agent")
 
         mlflow.autolog()
-        
-        # Initialize OpenAI client
-        api_key = get_openai_api_key()
-        client = OpenAI(api_key=api_key)
         
         # Load questions
         questions_df = load_questions()
@@ -121,19 +175,19 @@ def main():
         
         # Generate answers
         answers = []
-        print(f"Generating answers for {len(questions_df)} questions...")
+        print(f"Generating answers for {len(questions_df)} questions using LangChain...")
         
         for idx, row in questions_df.iterrows():
             print(f"Processing question {idx + 1}/{len(questions_df)}: {row['Question'][:50]}...")
             
             try:
                 answer = generate_answer(
-                    client=client,
                     question=row['Question'],
                     category=row['Category'],
                     weight=row['Weight'],
                     prompt_template_name=args.prompt_template,
                     model=args.model,
+                    search_results_count=args.search_results_count,
                     temperature=args.temperature,
                     max_tokens=args.max_tokens
                 )

@@ -4,8 +4,6 @@ Category: {category}
 Question: {question}
 Difficulty: {weight}/4
 
-{search_results}
-
 Provide an answer that:
 1. Explains the concept clearly
 2. Includes at least one concrete example or use case

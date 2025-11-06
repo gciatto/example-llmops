@@ -6,8 +6,6 @@ Difficulty Level: {weight}/4 (higher means more complex)
 Question:
 {question}
 
-{search_results}
-
 Instructions:
 - Provide a rigorous, academically sound answer
 - Include relevant technical terminology
