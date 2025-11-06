@@ -109,7 +109,7 @@ def main():
     use_search = args.use_search.lower() == "true"
     
     # Start MLflow run
-    with mlflow.start_run(run_name="generate_answers"):
+    with mlflow.start_run(run_name="generate_answers") as run:
         mlflow.set_tag("mlflow.runName", "generate_answers")
 
         mlflow.autolog()
@@ -181,6 +181,12 @@ def main():
             mlflow.log_metric("success_rate", len([a for a in answers if not a['Answer'].startswith('Error:')]) / len(answers) if len(answers) > 0 else 0)
         
         print("MLflow run completed!")
+        print("\nTo evaluate the generated answers, run:")
+        print(
+            "\tmlflow run -e evaluate_responses --env-manager=local", 
+            f"--experiment-id {run.info.experiment_id}",
+            f". -P generation_run_id={run.info.run_id}\n"
+        )
 
 
 if __name__ == "__main__":

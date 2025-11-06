@@ -8,9 +8,9 @@ entry_points:
 
   evaluate_responses:
     parameters:
-      generation_run_id: {type: str, default: ""}
-      judge_model: {type: str, default: "gpt-4.1-mini"}
-    command: "python evaluate_responses.py {generation_run_id} {judge_model}"
+      generation_run_id: {type: str, default: "none"}
+      judge_model: {type: str, default: "openai:/gpt-4.1-mini"}
+    command: "python evaluate_responses.py --generation-run-id {generation_run_id} --judge-model {judge_model}"
 
   generate_answers:
     parameters:

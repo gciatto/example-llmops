@@ -1,7 +1,7 @@
+import argparse
 import mlflow
 from mlflow.entities import Feedback
 from mlflow.genai.scorers import Guidelines, scorer, RelevanceToQuery
-import sys
 
 
 @scorer
@@ -53,16 +53,30 @@ def guidelines_model(model: str = None):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Evaluate generated answers using MLflow GenAI scorers"
+    )
+    parser.add_argument(
+        "--generation-run-id",
+        type=str,
+        default=None,
+        help="MLflow run ID of the generation run to evaluate. If not provided, evaluates all traces in the experiment."
+    )
+    parser.add_argument(
+        "--judge-model",
+        type=str,
+        default=None,
+        help="Model to use as judge for evaluation (e.g., gpt-4o-mini, gpt-4o)"
+    )
+    
+    args = parser.parse_args()
 
-    generation_run_id = sys.argv[1] if len(sys.argv) > 1 else None
-    if generation_run_id:
-        traces = mlflow.search_traces(run_id=generation_run_id)
+    if (run_id := args.generation_run_id) is None or run_id == "none":
+        traces = mlflow.search_traces()  # all traces in the experiment
     else:
-        traces = mlflow.search_traces() # all traces in the experiment
-
-    judge_model = sys.argv[2] if len(sys.argv) > 2 else None
+        traces = mlflow.search_traces(run_id=args.generation_run_id)
     
     mlflow.genai.evaluate(
         data=traces,
-        scorers=list(guidelines_model(model=judge_model)),
+        scorers=list(guidelines_model(model=args.judge_model)),
     )
