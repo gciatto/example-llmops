@@ -20,11 +20,3 @@ entry_points:
       max_questions: {type: int, default: -1}
       model: {type: str, default: "gpt-4o-mini"}
     command: "python generate_answers.py --prompt-template {prompt_template} --use-search {use_search} --search-results-count {search_results_count} --max-questions {max_questions} --model {model}"
-  
-  compare_prompts:
-    parameters:
-      prompt_templates: {type: str, default: "prompts/basic.txt,prompts/academic.txt,prompts/concise.txt"}
-      max_questions: {type: int, default: 10}
-      use_search: {type: str, default: "false"}
-      model: {type: str, default: "gpt-4o-mini"}
-    command: "python compare_prompts.py --prompt-templates {prompt_templates} --max-questions {max_questions} --use-search {use_search} --model {model}"
