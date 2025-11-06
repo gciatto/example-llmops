@@ -21,7 +21,9 @@ def generate_answer(
     prompt_template_name: str,
     model: str = "gpt-4o-mini",
     use_search: bool = False,
-    search_results_count: int = 3
+    search_results_count: int = 3,
+    temperature: float = 0.7,
+    max_tokens: int = 500
 ) -> str:
     """
     Generate an answer for a single question.
@@ -35,6 +37,8 @@ def generate_answer(
         model: OpenAI model to use
         use_search: Whether to enrich with web search
         search_results_count: Number of search results to include
+        temperature: Sampling temperature for generation
+        max_tokens: Maximum tokens in generated response
         
     Returns:
         Generated answer text
@@ -62,8 +66,8 @@ def generate_answer(
             {"role": "system", "content": "You are an expert in software engineering education."},
             {"role": "user", "content": prompt}
         ],
-        temperature=0.7,
-        max_tokens=500
+        temperature=temperature,
+        max_tokens=max_tokens
     )
     
     return response.choices[0].message.content
@@ -96,13 +100,25 @@ def main():
         "--max-questions",
         type=int,
         default=-1,
-        help="Maximum number of questions to process (-1 for all)"
+        help="Maximum number of questions to process (-1 for unlimited)"
     )
     parser.add_argument(
         "--model",
         type=str,
         default="gpt-4o-mini",
         help="OpenAI model to use"
+    )
+    parser.add_argument(
+        "--temperature",
+        type=float,
+        default=0.7,
+        help="Sampling temperature for generation (0.0 to 1.0)"
+    )
+    parser.add_argument(
+        "--max-tokens",
+        type=int,
+        default=500,
+        help="Maximum number of tokens in generated responses"
     )
     
     args = parser.parse_args()
@@ -143,7 +159,9 @@ def main():
                     prompt_template_name=args.prompt_template,
                     model=args.model,
                     use_search=use_search,
-                    search_results_count=args.search_results_count
+                    search_results_count=args.search_results_count,
+                    temperature=args.temperature,
+                    max_tokens=args.max_tokens
                 )
                 
                 answers.append({
