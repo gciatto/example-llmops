@@ -81,7 +81,9 @@ def web_search_tool(query: str, max_results: int = 3) -> str:
         max_results: Maximum number of results to return (default: 3)
         
     Returns:
-        Formatted string with search results
+        Markdown-formatted enumeration of search results where,
+        for each result, the first line is the title of a Web page with an hyper-ref to the page's URL, 
+        and the second line is a snippet/summary of the content.
     """
     results = search_web(query, max_results=max_results)
     return format_search_results(results)

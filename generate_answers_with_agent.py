@@ -10,22 +10,7 @@ import mlflow
 from utils import *
 import tempfile
 from langchain_openai import ChatOpenAI
-from langchain.agents import AgentExecutor, create_tool_calling_agent
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-
-
-@tool
-def web_search(query: str, max_results: int = 3) -> str:
-    """Search the web for information related to a query. Use this when you need additional context or references to answer the question accurately.
-    
-    Args:
-        query: The search query to look up on the web
-        max_results: Maximum number of search results to return (default: 3)
-    
-    Returns:
-        Formatted string with search results including titles, snippets, and URLs
-    """
-    return web_search_tool(query, max_results)
+from langchain.agents import create_agent
 
 
 def generate_answer(
@@ -56,10 +41,11 @@ def generate_answer(
     """
 
     # Load prompt template
-    prompt_text = mlflow.genai.load_prompt(f"prompts:/{prompt_template_name}@latest")
+    system_prompt = mlflow.genai.load_prompt(f"prompts:/system@latest")
+    prompt = mlflow.genai.load_prompt(f"prompts:/{prompt_template_name}@latest")
     
     # Format the base prompt
-    formatted_prompt = prompt_text.format(
+    formatted_prompt = prompt.template.format(
         category=category,
         question=question,
         weight=weight,
@@ -74,41 +60,32 @@ def generate_answer(
     )
     
     if search_results_count > 0:
+        tools_prompt = mlflow.genai.load_prompt(f"prompts:/tools@latest")
+
         # Create agent with tools
-        tools = [web_search]
-        
-        # Create prompt template for agent
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", 
-                "You are an expert in software engineering education.\n"
-                "Use the provided web search tool to find relevant information when needed."
-            ),
-            ("user", "{input}"),
-            MessagesPlaceholder("agent_scratchpad"),
-        ])
+        tools = [web_search_tool]
         
         # Create agent
-        agent = create_tool_calling_agent(llm, tools, prompt)
-        agent_executor = AgentExecutor(
-            agent=agent,
+        agent = create_agent(
+            model=llm,
             tools=tools,
-            verbose=False,
-            max_iterations=3,
-            handle_parsing_errors=True
         )
+
+        messages = {
+            "messages": [
+                {"role": "system", "content": f"{system_prompt.template}\n\n{tools_prompt.template}" },
+                {"role": "user", "content": formatted_prompt}
+            ]
+        }
         
         # Invoke agent
-        result = agent_executor.invoke({
-            "input": formatted_prompt,
-            "max_results": search_results_count
-        })
-        
-        return result["output"]
+        result = agent.invoke(messages)
+        return result['messages'][-1].content
     else:
         # Direct LLM call without tools
         messages = [
-            ("system", "You are an expert in software engineering education."),
-            ("human", formatted_prompt)
+            ("system", system_prompt.template),
+            ("user", formatted_prompt)
         ]
         
         response = llm.invoke(messages)

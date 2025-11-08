@@ -40,6 +40,7 @@ def generate_answer(
         Generated answer text
     """
 
+    system_prompt = mlflow.genai.load_prompt(f"prompts:/system@latest")
     prompt = mlflow.genai.load_prompt(f"prompts:/{prompt_template_name}@latest")
     
     # Format the prompt
@@ -53,7 +54,7 @@ def generate_answer(
     response = client.chat.completions.create(
         model=model,
         messages=[
-            {"role": "system", "content": "You are an expert in software engineering education."},
+            {"role": "system", "content": system_prompt.template},
             {"role": "user", "content": prompt}
         ],
         temperature=temperature,

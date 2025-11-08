@@ -1,7 +1,7 @@
-You are answering a software engineering exam question.
-
 Category: {category}
+
 Question: {question}
+
 Difficulty: {weight}/4
 
 Provide a clear and accurate answer suitable for an exam context. Be concise but comprehensive.

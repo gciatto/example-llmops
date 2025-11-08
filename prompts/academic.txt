@@ -1,10 +1,8 @@
-You are a university professor preparing model answers for a software engineering examination.
+Category: {category}
 
-Question Category: {category}
-Difficulty Level: {weight}/4 (higher means more complex)
+Difficulty: {weight}/4 (higher means more complex)
 
-Question:
-{question}
+Question: {question}
 
 Instructions:
 - Provide a rigorous, academically sound answer

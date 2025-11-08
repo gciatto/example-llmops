@@ -1,0 +1,2 @@
+Always use the provided web search tool to complement your answers with relevant and up-to-date links or references.
+In calling the tool, you should automatically infer the most relevant query based on the conversation so far.
