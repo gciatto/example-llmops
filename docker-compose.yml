@@ -12,6 +12,9 @@ services:
       - mlflow-runs:/mlruns
       - mlflow-artifacts:/mlartifacts
       - mlflow-db:/mlflow
+    environment:
+      # insecure setting, for didactical purposes only
+      - MLFLOW_SERVER_ALLOWED_HOSTS=*
 volumes:
   mlflow-runs:
   mlflow-artifacts:
