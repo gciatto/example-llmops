@@ -18,7 +18,7 @@ def generate_answer(
     category: str,
     weight: int,
     prompt_template_name: str,
-    model: str = "gpt-4o-mini",
+    model: str = "gpt-4.1-mini",
     search_results_count: int = 3,
     temperature: float = 0.7,
     max_tokens: int = 500
@@ -117,7 +117,7 @@ def main():
     parser.add_argument(
         "--model",
         type=str,
-        default="gpt-4o-mini",
+        default="gpt-4.1-mini",
         help="OpenAI model to use"
     )
     parser.add_argument(

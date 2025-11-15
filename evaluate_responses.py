@@ -66,7 +66,7 @@ if __name__ == "__main__":
         "--judge-model",
         type=str,
         default=None,
-        help="Model to use as judge for evaluation (e.g., gpt-4o-mini, gpt-4o)"
+        help="Model to use as judge for evaluation (e.g., gpt-4.1-mini, gpt-4o)"
     )
     
     args = parser.parse_args()
